@@ -1,0 +1,104 @@
+from selenium import webdriver as driver
+import selenium.webdriver.support
+import time
+import random
+import datetime
+user_email='' #Your private account data
+user_password='' #Your private account data
+billboard =[]
+bad_words = {"featuring","Feat.","Featuring","feat.",
+            "x", "&", "," ,"X" ,"And"}
+
+def generate_dates(start, stop, days_delta):
+    start_time_obj = datetime.datetime.strptime(start, '%Y-%m-%d')
+    stop_time_obj = datetime.datetime.strptime(stop, '%Y-%m-%d')
+    substract = datetime.timedelta(days=days_delta)
+    current = start_time_obj
+    while current > stop_time_obj:
+        current = start_time_obj - substract
+        yield datetime.datetime.strftime(current, "%Y-%m-%d")
+        start_time_obj = current
+        
+def spotify_login():
+    chrome.get('''https://accounts.spotify.com/en/login/?continue=https
+                  :%2F%2Fwww.spotify.com%2Fapi%2Fgrowth%2Fl2l-redirect&_locale=en-IL''')
+    email = chrome.find_element_by_xpath('//*[@id="login-username"]')
+    password = chrome.find_element_by_xpath('//*[@id="login-password"]')
+    log_in = chrome.find_element_by_xpath('//*[@id="login-button"]')
+    email.send_keys(user_email)
+    time.sleep(random.random())
+    password.send_keys(user_password)
+    time.sleep(random.random())
+    log_in.click()
+    time.sleep(random.random()*random.randint(3,7))
+
+def page_scan(date):
+    chrome.get('https://www.billboard.com/charts/hot-100/'+str(date))
+    for i in range(1,110):
+        try:
+            track_xpath = '//*[@id="charts"]/div/div[7]/div/ol/li['+str(i)+']/button/span[2]/span[1]'
+            artist_xpath = '//*[@id="charts"]/div/div[7]/div/ol/li['+str(i)+']/button/span[2]/span[2]'
+            track = chrome.find_element_by_xpath(track_xpath)
+            time.sleep(random.randint(1,2)*random.random())
+            artist = chrome.find_element_by_xpath(artist_xpath)
+            time.sleep(random.randint(2,7)*random.random())
+            artist_filter = artist.text.split(" ")
+            artist_clean = ""
+            for i in artist_filter:
+                if i in bad_words:
+                    break
+                else:
+                    artist_clean = artist_clean +" " +i 
+            billboard.append(track.text+" "+artist_clean)
+        except:
+            continue
+
+def generate_playlist(playlist_name):
+    chrome.get('https://www.spotlistr.com/search/textbox')
+    for i in range(29):
+    try: 
+        spotlistr_textbox = chrome.find_element_by_xpath('''//*[@id="__next"]/div[1]/div[2]/div[2]/
+                                                            div[2]/div/div/div/form[1]/div/div[1]/div/div/textarea''')
+        break
+    except:
+         time.sleep(1)
+    for i in billboard:
+        spotlistr_textbox.send_keys(i+"\n")
+    time.sleep(random.random()*random.randint(1,2))
+    submit = chrome.find_element_by_xpath('''//*[@id="__next"]/div[1]/div[2]/div[2]/
+                                          div[2]/div/div/div/form[1]/div/div[3]/div/div/button''')
+    submit.click()
+    for i in range(29):
+        try: 
+            playlist_title = chrome.find_element_by_xpath('''//*[@id="__next"]/div[1]/div[2]/div[2]/
+                                                          div[2]/div/div/div/form[2]/div[2]/div[1]/div/input''')
+            break
+        except:
+             time.sleep(1)
+    playlist_title.send_keys(playlist_name)
+    time.sleep(random.randint(4,8))
+    create_playlist = chrome.find_element_by_xpath('''//*[@id="__next"]/div[1]/div[2]/div[2]/
+                                                   div[2]/div/div/div/form[2]/div[3]/div/button[1]''')
+    create_playlist.click() 
+
+#Generate Dates
+stoptime_str = "2015-01-01"
+starttime_str = "2020-12-19"
+date_list=list(i for i in generate_dates(starttime_str, stoptime_str, 7))
+
+##Start Selenium
+chrome = driver.Chrome(executable_path=r'C:\Webdrivers\chromedriver.exe')
+chrome.get('https://www.google.com')
+time.sleep(random.randint(3,8))
+
+#Scan Cycle
+chrome = driver.Chrome(executable_path=r'C:\Webdrivers\chromedriver.exe')
+chrome.get('https://www.google.com')
+time.sleep(random.randint(3,8))
+spotify_login()
+for i in date_list:
+        page_scan(i)
+        time.sleep(3)
+        generate_playlist(i)
+        time.sleep(5)
+        billboard = []
